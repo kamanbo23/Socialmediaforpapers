@@ -1,0 +1,77 @@
+import { useRouter } from 'next/router'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import Layout from '../../components/Layout'
+
+export default function PaperDetail() {
+  const router = useRouter()
+  const { id } = router.query
+  const [paper, setPaper] = useState(null)
+  const [comment, setComment] = useState('')
+  const [rating, setRating] = useState(0)
+
+  useEffect(() => {
+    if (id) {
+      axios.get(`http://localhost:8000/api/papers/${id}/`).then((response) => {
+        setPaper(response.data)
+      })
+    }
+  }, [id])
+
+  const handleSubmitFeedback = async () => {
+    try {
+      const token = localStorage.getItem('access_token')
+      await axios.post(
+        `http://localhost:8000/api/feedbacks/`,
+        { paper: id, comment, rating },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      setComment('')
+      setRating(0)
+    } catch (error) {
+      console.error('Feedback submission failed', error)
+    }
+  }
+
+  if (!paper) return <div>Loading...</div>
+
+  return (
+    <Layout>
+      <h1 className="mt-6 text-2xl font-bold">{paper.title}</h1>
+      <p>{paper.description}</p>
+      <a href={paper.link} className="text-blue-500" target="_blank" rel="noopener noreferrer">
+        View Paper
+      </a>
+      <div className="mt-6">
+        <h2 className="text-xl font-bold">Feedback</h2>
+        {paper.feedbacks.map((fb) => (
+          <div key={fb.id} className="p-2 mt-2 border border-gray-300 rounded">
+            <p>{fb.comment}</p>
+            <p>Rating: {fb.rating}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col mt-6">
+        <textarea
+          placeholder="Leave a comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          className="p-2 mt-4 border border-gray-300 rounded"
+        />
+        <input
+          type="number"
+          placeholder="Rating"
+          value={rating}
+          onChange={(e) => setRating(Number(e.target.value))}
+          className="p-2 mt-4 border border-gray-300 rounded"
+        />
+        <button
+          onClick={handleSubmitFeedback}
+          className="px-4 py-2 mt-4 text-white bg-blue-600 rounded"
+        >
+          Submit Feedback
+        </button>
+      </div>
+    </Layout>
+  )
+}
